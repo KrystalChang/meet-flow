@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Users, Calendar, User, CalendarCheck } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -52,11 +53,20 @@ const INITIAL_MEMBERS: Member[] = [
     name: "我",
     color: "bg-blue-500",
     availability: [
-      slot(0, 9), slot(0, 10), slot(0, 11),          // Mon 9–12
-      slot(0, 14), slot(0, 15), slot(0, 16),         // Mon 14–17
-      slot(2, 9),  slot(2, 10), slot(2, 11),         // Wed 9–12（共同）
-      slot(3, 14), slot(3, 15), slot(3, 16),         // Thu 14–17
-      slot(4, 9),  slot(4, 10),                      // Fri 9–11
+      slot(0, 9),
+      slot(0, 10),
+      slot(0, 11), // Mon 9–12
+      slot(0, 14),
+      slot(0, 15),
+      slot(0, 16), // Mon 14–17
+      slot(2, 9),
+      slot(2, 10),
+      slot(2, 11), // Wed 9–12（共同）
+      slot(3, 14),
+      slot(3, 15),
+      slot(3, 16), // Thu 14–17
+      slot(4, 9),
+      slot(4, 10), // Fri 9–11
     ],
   },
   {
@@ -64,10 +74,17 @@ const INITIAL_MEMBERS: Member[] = [
     name: "小梁",
     color: "bg-green-500",
     availability: [
-      slot(0, 9),  slot(0, 10), slot(0, 11),         // Mon 9–12
-      slot(2, 9),  slot(2, 10), slot(2, 11),         // Wed 9–12（共同）
-      slot(2, 14), slot(2, 15), slot(2, 16),         // Wed 14–17
-      slot(4, 9),  slot(4, 10),                      // Fri 9–11
+      slot(0, 9),
+      slot(0, 10),
+      slot(0, 11), // Mon 9–12
+      slot(2, 9),
+      slot(2, 10),
+      slot(2, 11), // Wed 9–12（共同）
+      slot(2, 14),
+      slot(2, 15),
+      slot(2, 16), // Wed 14–17
+      slot(4, 9),
+      slot(4, 10), // Fri 9–11
     ],
   },
   {
@@ -75,9 +92,14 @@ const INITIAL_MEMBERS: Member[] = [
     name: "盧盧",
     color: "bg-purple-500",
     availability: [
-      slot(1, 10), slot(1, 11), slot(1, 12),         // Tue 10–13
-      slot(2, 9),  slot(2, 10), slot(2, 11),         // Wed 9–12（共同）
-      slot(3, 14), slot(3, 15),                      // Thu 14–16
+      slot(1, 10),
+      slot(1, 11),
+      slot(1, 12), // Tue 10–13
+      slot(2, 9),
+      slot(2, 10),
+      slot(2, 11), // Wed 9–12（共同）
+      slot(3, 14),
+      slot(3, 15), // Thu 14–16
     ],
   },
 ];
@@ -101,38 +123,6 @@ function ScheduleGrid({
   onBatchToggle?: (slots: TimeSlot[], fill: boolean) => void;
   emerald?: boolean;
 }) {
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const dragging = useRef(false);
-
-  // Commit the selection when mouse is released anywhere
-  useEffect(() => {
-    function handleMouseUp() {
-      if (!dragging.current || !drag) return;
-      const d0 = Math.min(drag.startDay, drag.curDay);
-      const d1 = Math.max(drag.startDay, drag.curDay);
-      const h0 = Math.min(drag.startHourIdx, drag.curHourIdx);
-      const h1 = Math.max(drag.startHourIdx, drag.curHourIdx);
-      const selected: TimeSlot[] = [];
-      for (let d = d0; d <= d1; d++)
-        for (let hi = h0; hi <= h1; hi++)
-          selected.push(slot(d, HOURS[hi]));
-      onBatchToggle?.(selected, drag.filling);
-      dragging.current = false;
-      setDrag(null);
-    }
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [drag, onBatchToggle]);
-
-  function inDragRect(d: number, hi: number): boolean {
-    if (!drag) return false;
-    const d0 = Math.min(drag.startDay, drag.curDay);
-    const d1 = Math.max(drag.startDay, drag.curDay);
-    const h0 = Math.min(drag.startHourIdx, drag.curHourIdx);
-    const h1 = Math.max(drag.startHourIdx, drag.curHourIdx);
-    return d >= d0 && d <= d1 && hi >= h0 && hi <= h1;
-  }
-
   return (
     <div className="overflow-x-auto select-none">
       <table className="w-full text-sm border-collapse">
@@ -174,25 +164,8 @@ function ScheduleGrid({
                 return (
                   <td key={d} className="p-0.5">
                     <div
-                      className={`h-8 rounded border transition-colors ${cellClass} ${onBatchToggle ? "cursor-pointer" : "cursor-default"}`}
-                      onMouseDown={(e) => {
-                        if (!onBatchToggle) return;
-                        e.preventDefault();
-                        dragging.current = true;
-                        setDrag({
-                          startDay: d,
-                          startHourIdx: hi,
-                          curDay: d,
-                          curHourIdx: hi,
-                          filling: !active,
-                        });
-                      }}
-                      onMouseOver={() => {
-                        if (!dragging.current) return;
-                        setDrag((prev) =>
-                          prev ? { ...prev, curDay: d, curHourIdx: hi } : prev
-                        );
-                      }}
+                      className={`h-8 rounded border transition-colors ${cellClass} ${onToggle ? "cursor-pointer" : "cursor-default"}`}
+                      onClick={() => onToggle?.(d, h)}
                     />
                   </td>
                 );
@@ -227,6 +200,10 @@ export default function MeetFlow() {
   const [newName, setNewName] = useState("");
   const [open, setOpen] = useState(false);
   const [viewId, setViewId] = useState("xiao-liang");
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [meetingName, setMeetingName] = useState("");
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const me = members.find((m) => m.id === "me")!;
   const others = members.filter((m) => m.id !== "me");
@@ -234,8 +211,8 @@ export default function MeetFlow() {
 
   const commonSlots = DAYS.flatMap((_, d) =>
     HOURS.filter((h) =>
-      members.every((m) => m.availability.includes(slot(d, h)))
-    ).map((h) => slot(d, h))
+      members.every((m) => m.availability.includes(slot(d, h))),
+    ).map((h) => slot(d, h)),
   );
 
   function batchToggleMySlots(slots: TimeSlot[], fill: boolean) {
@@ -245,11 +222,11 @@ export default function MeetFlow() {
           ? m
           : {
               ...m,
-              availability: fill
-                ? [...new Set([...m.availability, ...slots])]
-                : m.availability.filter((x) => !slots.includes(x)),
-            }
-      )
+              availability: m.availability.includes(s)
+                ? m.availability.filter((x) => x !== s)
+                : [...m.availability, s],
+            },
+      ),
     );
   }
 
@@ -453,11 +430,137 @@ export default function MeetFlow() {
 
           {/* ── Tab 4: Common Availability ── */}
           <TabsContent value="common">
-            <div className="mb-5">
-              <h2 className="text-base font-semibold">共同空閒時間</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                所有 {members.length} 位成員都空閒的時段
-              </p>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-base font-semibold">共同空閒時間</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  所有 {members.length} 位成員都空閒的時段
+                </p>
+              </div>
+              <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() =>
+                      setSelectedAttendees(members.map((m) => m.id))
+                    }
+                  >
+                    <Calendar className="w-4 h-4" />
+                    預約會議
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>預約會議</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-4 mt-2">
+                    <div>
+                      <label className="text-sm font-medium">會議名稱</label>
+                      <Input
+                        placeholder="輸入會議名稱"
+                        value={meetingName}
+                        onChange={(e) => setMeetingName(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">選擇與會者</label>
+                      <div className="mt-2 space-y-2">
+                        {members.map((m) => (
+                          <div
+                            key={m.id}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={m.id}
+                              checked={selectedAttendees.includes(m.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedAttendees((prev) => [
+                                    ...prev,
+                                    m.id,
+                                  ]);
+                                } else {
+                                  setSelectedAttendees((prev) =>
+                                    prev.filter((id) => id !== m.id),
+                                  );
+                                }
+                              }}
+                            />
+                            <label
+                              htmlFor={m.id}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              {m.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">選擇時段</label>
+                      <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
+                        {commonSlots.map((s) => {
+                          const [d, h] = s.split("-").map(Number);
+                          return (
+                            <div
+                              key={s}
+                              className="flex items-center space-x-2"
+                            >
+                              <input
+                                type="radio"
+                                id={s}
+                                name="slot"
+                                value={s}
+                                checked={selectedSlot === s}
+                                onChange={(e) =>
+                                  setSelectedSlot(e.target.value)
+                                }
+                                className="h-4 w-4"
+                              />
+                              <label htmlFor={s} className="text-sm">
+                                {DAYS[d]} {h}:00–{h + 1}:00
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        // 發送確認邏輯，這裡先alert
+                        alert(
+                          `會議 "${meetingName}" 已預約！\n與會者: ${selectedAttendees
+                            .map((id) => members.find((m) => m.id === id)?.name)
+                            .join(", ")}\n時段: ${
+                            selectedSlot
+                              ? (() => {
+                                  const [d, h] = selectedSlot
+                                    .split("-")
+                                    .map(Number);
+                                  return `${DAYS[d]} ${h}:00–${h + 1}:00`;
+                                })()
+                              : "未選擇"
+                          }`,
+                        );
+                        setBookingOpen(false);
+                        setMeetingName("");
+                        setSelectedAttendees([]);
+                        setSelectedSlot(null);
+                      }}
+                      disabled={
+                        !meetingName.trim() ||
+                        selectedAttendees.length === 0 ||
+                        !selectedSlot
+                      }
+                      className="w-full"
+                    >
+                      發送會議時段確認
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <Card>
